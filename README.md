@@ -9,16 +9,6 @@
 
 ---
 
-# OCI ARM 实例自动管理脚本
-
-## 功能简介
-- 每小时自动检查租户是否存在实例
-- 若无实例则自动创建新的 Ubuntu ARM 实例（4C24G）
-- 操作系统：Canonical Ubuntu 22.04 Minimal aarch64
-- 实例类型：VM.Standard.A1.Flex（Oracle Cloud 始终免费）
-
----
-
 ## 工作流程说明
 
 ### 触发条件
