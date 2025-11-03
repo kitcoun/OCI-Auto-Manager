@@ -256,7 +256,7 @@ jobs:
             --availability-domain "$ad" \
             --compartment-id "${{secrets.OCI_TENANCY}}" \
             --shape "VM.Standard.A1.Flex" \
-            --shape-config '{"ocpus": 4, "memoryInGBs": 24}' \
+            --shape-config '{"ocpus": 3, "memoryInGBs": 24}' \
             --display-name "$instance_name" \
             --image-id "$image_id" \
             --subnet-id "$subnet_id" \
