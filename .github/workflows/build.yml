@@ -196,8 +196,8 @@ jobs:
           echo "=== 创建新的Ubuntu ARM实例 ==="
           echo "配置信息："
           echo "- 实例类型：VM.Standard.A1.Flex"
-          echo "- CPU配置：4 OCPU"
-          echo "- 内存配置：24 GB"
+          echo "- CPU配置：2 OCPU"
+          echo "- 内存配置：22 GB"
           echo "- 架构类型：ARM (Ampere A1)"
           echo "- 操作系统：Canonical Ubuntu 22.04 Minimal aarch64"
           echo "- 网络配置：分配公网IP"
@@ -256,7 +256,7 @@ jobs:
             --availability-domain "$ad" \
             --compartment-id "${{secrets.OCI_TENANCY}}" \
             --shape "VM.Standard.A1.Flex" \
-            --shape-config '{"ocpus": 3, "memoryInGBs": 24}' \
+            --shape-config '{"ocpus": 2, "memoryInGBs": 22}' \
             --display-name "$instance_name" \
             --image-id "$image_id" \
             --subnet-id "$subnet_id" \
