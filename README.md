@@ -1,5 +1,6 @@
 
 # OCI ARM 实例自动管理脚本
+免费限制：https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm?utm_source=chatgpt.com
 
 ## 功能简介
 - 每小时自动检查租户是否存在实例
