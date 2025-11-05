@@ -105,7 +105,7 @@ jobs:
         with:
           silent: false
           command: >
-            oci compute instance launch 
+            compute instance launch 
               --availability-domain ${{ steps.get_availability_domain.outputs.output }} 
               --compartment-id ${{ env.COMPARTMENT_ID }} 
               --shape ${{ env.INSTANCE_SHAPE }} 
