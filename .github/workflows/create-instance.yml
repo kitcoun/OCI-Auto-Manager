@@ -121,7 +121,7 @@ jobs:
 
           error_message=$(echo "$instance_response" | jq -r '.message // empty')
 
-          echo "error_message=${error_message}" >> $GITHUB_OUTPUT
+          echo "error_message=$error_message" >> $GITHUB_OUTPUT
 
           echo "✅ 实例创建命令已执行：${instance_response}"
 
@@ -129,15 +129,15 @@ jobs:
 
       - name: Check error message
         run: |
-          # Function to handle error checking
-          error_message=${{ steps.created_ubuntu.outputs.output }}
+          error_message="${{ steps.created_ubuntu.outputs.error_message }}"
+
           if [[ -n "$error_message" ]]; then
             echo "⚠️ OCI 返回的错误: $error_message"
 
-            # Check if the error message is in the expected errors list
-            in_expected=$(echo '${{ env.EXPECTED_ERRORS }}' | jq --arg msg "$error_message" -e '.[] | select(. == $msg)' > /dev/null; echo $?)
+            # 检查错误消息是否在预期错误列表中
+            in_expected=$(echo "${{ env.EXPECTED_ERRORS }}" | jq --arg msg "$error_message" -e '.[] | select(. == $msg)' > /dev/null; echo $?)
 
-            # If the error is not in the expected list, trigger failure (throwing exception)
+            # 如果错误不在预期列表中，则触发失败（抛出异常）
             if [[ "$in_expected" -ne 0 ]]; then
               echo "❌ 遇到意外的错误: $error_message"
               echo "自定义异常: 这个错误是不预期的。"
