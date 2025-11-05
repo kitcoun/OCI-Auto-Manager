@@ -86,7 +86,7 @@ jobs:
           command: 'network subnet list --compartment-id ${{ env.COMPARTMENT_ID }} --vcn-id ${{ steps.get_vcn_id.outputs.output }}'
           query: 'data[0]."id"'
 
-      - name: Create new Ubuntu ARM instance (4C24G)
+      - name: Set ssh key file
         if: success()
         run: |
           # 创建 SSH 公钥文件
@@ -98,4 +98,4 @@ jobs:
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
           silent: false
-          command: 'compute instance launch --availability-domain ${{ steps.get_availability_domain.outputs.output }} --compartment-id ${{ env.COMPARTMENT_ID }} --shape ${{ env.INSTANCE_SHAPE }} --ocpus ${{ env.OCPUS }} --memory-in-gbs ${{ env.MEMORY_GB }} --display-name "ubuntu-arm-4c24g" --image-id ${{ env.IMAGE_ID }} --subnet-id ${{ steps.get_subnet_id.outputs.output }} --ssh-authorized-keys-file /tmp/ssh_key.pub --assign-public-ip true --debug'
+          command: 'compute instance launch --availability-domain ${{ steps.get_availability_domain.outputs.output }} --compartment-id ${{ env.COMPARTMENT_ID }} --shape ${{ env.INSTANCE_SHAPE }} --shape-config "{\"ocpus\": ${{ env.OCPUS }}, \"memoryInGBs\": ${{ env.MEMORY_GB }}}" --display-name "ubuntu-arm-4c24g" --image-id ${{ env.IMAGE_ID }} --subnet-id ${{ steps.get_subnet_id.outputs.output }} --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}") --assign-public-ip true'
