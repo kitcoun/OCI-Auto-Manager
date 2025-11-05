@@ -22,8 +22,8 @@ jobs:
       OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_PRIVATE_KEY }}
       OCI_CLI_REGION: ${{ secrets.OCI_REGION }}
       COMPARTMENT_ID: ${{ secrets.OCI_TENANCY }}
-      IMAGE_ID: "ocid1.image.oc1.ap-singapore-1.aaaaaaaa5a3xwkk5vaichk47fms2uzvsqeriats2uorf6kwgq3l3nwrbhipa"
       SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+      IMAGE_ID: "ocid1.image.oc1.ap-singapore-1.aaaaaaaa5a3xwkk5vaichk47fms2uzvsqeriats2uorf6kwgq3l3nwrbhipa"
       INSTANCE_SHAPE: "VM.Standard.A1.Flex"
       OCPUS: 4
       MEMORY_GB: 24
@@ -61,6 +61,7 @@ jobs:
         if: success()
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
+          silent: false
           command: 'iam availability-domain list --compartment-id ${{ env.COMPARTMENT_ID }}'
           query: 'data[0]."name"'
 
@@ -68,6 +69,7 @@ jobs:
         if: success()
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
+          silent: false
           command: 'network vcn list --compartment-id ${{ env.COMPARTMENT_ID }}'
           query: 'data[0]."id"'
 
@@ -75,6 +77,7 @@ jobs:
         if: success()
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
+          silent: false
           command: 'network subnet list --compartment-id ${{ env.COMPARTMENT_ID }} --vcn-id ${{ steps.get_vcn_id.outputs.output }}'
           query: 'data[0]."id"'
 
