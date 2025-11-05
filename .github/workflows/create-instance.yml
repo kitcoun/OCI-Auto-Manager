@@ -49,7 +49,7 @@ jobs:
         id: check_instances
         with:
           silent: false
-          command: 'compute instance list --compartment-id ${{ steps.find-compartment-id.outputs.raw_output }}'
+          command: 'compute instance list --compartment-id $COMPARTMENT_ID'
           query: "data[?shape=='VM.Standard.A1.Flex' && lifecycle-state!='TERMINATED'].id"
 
       # 判断是否找到实例，并决定是否继续
