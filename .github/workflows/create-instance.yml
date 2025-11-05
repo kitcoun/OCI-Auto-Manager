@@ -50,7 +50,7 @@ jobs:
         with:
           silent: false
           command: 'compute instance list --compartment-id ${{ env.COMPARTMENT_ID }}'
-          query: "data[?shape=='VM.Standard.A1.Flex' && lifecycle-state!='TERMINATED'].id"
+          query: "data[?shape=='VM.Standard.A1.Flex' && \"lifecycle-state\"!='TERMINATED'].id"
 
       # 判断是否找到实例，并决定是否继续
       - name: Check if instances exist
@@ -67,19 +67,19 @@ jobs:
         if: success()  # 如果上一步成功，继续执行
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
-          command: 'iam availability-domain list --compartment-id ${{ secrets.OCI_TENANCY }}'
+          command: 'iam availability-domain list --compartment-id ${{ env.OCI_TENANCY }}'
           query: 'data[0]."name"'
 
       - name: Get VCN ID
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
-          command: 'network vcn list --compartment-id ${{ secrets.OCI_TENANCY }}'
+          command: 'network vcn list --compartment-id ${{ env.OCI_TENANCY }}'
           query: 'data[0]."id"'
 
       - name: Get Subnet ID
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
-          command: 'network subnet list --compartment-id ${{ secrets.OCI_TENANCY }} --vcn-id ${{ steps.get_vcn_id.outputs.output }}'
+          command: 'network subnet list --compartment-id ${{ env.OCI_TENANCY }} --vcn-id ${{ steps.get_vcn_id.outputs.output }}'
           query: 'data[0]."id"'
 
       # 创建实例
@@ -89,11 +89,11 @@ jobs:
           command: |
             compute instance launch \
               --availability-domain ${{ steps.get_availability_domain.outputs.output }} \
-              --compartment-id ${{ secrets.OCI_TENANCY }} \
-              --shape "$INSTANCE_SHAPE" \
+              --compartment-id ${{ env.OCI_TENANCY }} \
+              --shape ${{ env.INSTANCE_SHAPE }} \
               --shape-config "{\"ocpus\": $OCPUS, \"memoryInGBs\": $MEMORY_GB}" \
               --display-name "ubuntu-arm-4c24g-$(date +%Y%m%d-%H%M%S)" \
-              --image-id $IMAGE_ID \
+              --image-id ${{ IMAGE_ID }} \
               --subnet-id ${{ steps.get_subnet_id.outputs.output }} \
-              --ssh-authorized-keys-file <(echo "$SSH_PUBLIC_KEY") \
+              --ssh-authorized-keys-file <(echo ${{ env.SSH_PUBLIC_KEY }}) \
               --assign-public-ip true
