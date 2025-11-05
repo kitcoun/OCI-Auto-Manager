@@ -120,6 +120,7 @@ jobs:
             --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}"))
 
           error_message=$(echo "$instance_response" | jq -r '.message // empty')
+          
           echo "error_message=${error_message}" >> $GITHUB_OUTPUT
 
           echo "✅ 实例创建命令已执行：${instance_response}"
