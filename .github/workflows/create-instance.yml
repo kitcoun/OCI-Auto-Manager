@@ -40,7 +40,7 @@ jobs:
 
       # 检查是否存在运行中的VM.Standard.A1.Flex实例
       - name: Check VM.Standard.A1.Flex instance existence
-        uses: oracle-actions/run-oci-cli-command@v1
+        uses: oracle-actions/run-oci-cli-command@v1.3.2
         id: check_instances
         with:
           command: |
@@ -71,7 +71,7 @@ jobs:
       # 创建新的Ubuntu ARM实例
       - name: Create new Ubuntu ARM instance (4C24G)
         if: env.INSTANCES_FOUND == 'false'
-        uses: oracle-actions/run-oci-cli-command@v1
+        uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
           command: |
             echo "=== 创建新的Ubuntu ARM实例 ==="
