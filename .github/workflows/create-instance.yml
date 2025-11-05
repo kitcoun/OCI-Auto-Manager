@@ -84,6 +84,12 @@ jobs:
           command: 'network subnet list --compartment-id ${{ env.COMPARTMENT_ID }} --vcn-id ${{ steps.get_vcn_id.outputs.output }}'
           query: 'data[0]."id"'
 
+      - name: Set SSH Key file
+        if: success()
+        run: |
+          # Create a temporary file to hold the SSH public key
+          echo "$SSH_PUBLIC_KEY" > /tmp/ssh_key.pub
+
       # 创建实例
       - name: Create new Ubuntu ARM instance (4C24G)
         if: success()
@@ -99,5 +105,5 @@ jobs:
               --display-name "ubuntu-arm-4c24g-$(date +%Y%m%d-%H%M%S)" \
               --image-id ${{ env.IMAGE_ID }} \
               --subnet-id ${{ steps.get_subnet_id.outputs.output }} \
-              --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}") \
+              --ssh-authorized-keys-file /tmp/ssh_key.pub \
               --assign-public-ip true
