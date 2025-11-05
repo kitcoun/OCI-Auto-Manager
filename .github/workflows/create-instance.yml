@@ -108,22 +108,32 @@ jobs:
         run: |
           echo "=== 正在创建新的 Ubuntu ARM 实例 ==="
           set +e
+          temp_error_file=$(mktemp)
           instance_response=$(oci compute instance launch \
             --availability-domain "${{ steps.get_availability_domain.outputs.output }}" \
             --compartment-id "${{ env.COMPARTMENT_ID }}" \
             --shape "${{ env.INSTANCE_SHAPE }}" \
             --shape-config "{\"ocpus\": ${{ env.OCPUS }}, \"memoryInGBs\": ${{ env.MEMORY_GB }}}" \
-            --display-name "ubuntu-arm-4c24g" \
+            --display-name "ubuntu-arm-4c24g-$(date +%s)" \
             --image-id "${{ env.IMAGE_ID }}" \
             --subnet-id "${{ steps.get_subnet_id.outputs.output }}" \
             --assign-public-ip true \
-            --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}"))
+            --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}") 2>"$temp_error_file")
 
-          error_message=$(echo "$instance_response" | jq -r '.message // empty')
+          exit_code=$?
+          error_content=$(cat "$temp_error_file")
+          rm -f "$temp_error_file"
 
-          echo "error_message=$error_message" >> $GITHUB_OUTPUT
-
-          echo "✅ 实例创建命令已执行：${instance_response}"
+          if [ $exit_code -eq 0 ]; then
+              echo "✅ 实例创建成功！"
+              echo "$instance_response"
+              echo "error_message=" >> $GITHUB_OUTPUT
+          else
+              error_message=$(echo "$error_content" | grep -o '"message": "[^"]*' | cut -d'"' -f4 || echo "Unknown error")
+              echo "❌ 实例创建失败！"
+              echo "$error_content"
+              echo "error_message=$error_message" >> $GITHUB_OUTPUT
+          fi
 
           set -e
 
