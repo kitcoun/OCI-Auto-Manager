@@ -1,12 +1,8 @@
-# https://github.com/oracle-actions/run-oci-cli-command/
 name: OCI Ubuntu ARM Instance Auto-Manager
 
-# 触发条件
 on:
   schedule:
     - cron: '*/15 * * * *'
-  # push:
-  #   branches: [ main ]
   workflow_dispatch:
     inputs:
       manual_trigger_reason:
@@ -31,71 +27,96 @@ jobs:
       MEMORY_GB: 24
 
     steps:
-      # 检出代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 安装jq（用于JSON处理）
-      # - name: Install dependencies
-      #   run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Set up OCI CLI
+        run: |
+          curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh | bash -s -- --accept-all-defaults
+          echo 'export PATH=$HOME/bin:$PATH' >> ~/.bashrc
+          source ~/.bashrc
+          echo "$HOME/bin" >> $GITHUB_PATH
+          export PATH="$HOME/bin:$PATH"
 
-      # 检查是否存在运行中的VM.Standard.A1.Flex实例
+      - name: Configure OCI CLI
+        env:
+          OCI_CLI_AUTH: api_key
+        run: |
+          mkdir -p ~/.oci
+          echo "${{ env.SSH_PUBLIC_KEY }}" > /tmp/oci_api_key.pub
+          chmod 600 ~/.oci/oci_api_key.pem
+          cat > ~/.oci/config <<EOF
+          [DEFAULT]
+          user=${{ env.OCI_CLI_USER }}
+          fingerprint=${{ env.OCI_CLI_FINGERPRINT }}
+          tenancy=${{ env.OCI_CLI_TENANCY }}
+          region=${{ env.OCI_CLI_REGION }}
+          key_file=/tmp/oci_api_key.pub
+          EOF
+          echo "✅ OCI CLI 配置完成"
+
       - name: Check VM.Standard.A1.Flex instance existence
-        uses: oracle-actions/run-oci-cli-command@v1.3.2
         id: check_instances
-        with:
-          silent: false
-          command: 'compute instance list --compartment-id ${{ env.COMPARTMENT_ID }}'
-          query: 'data[?shape==`VM.Standard.A1.Flex`].{id:id, name:\"display-name\", shape:shape, state:\"lifecycle-state\"}'
+        run: |
+          instances=$(oci compute instance list \
+            --compartment-id "${{ env.COMPARTMENT_ID }}" \
+            --query 'data[?shape==`VM.Standard.A1.Flex`].{id:id, name:"display-name", shape:shape, state:"lifecycle-state"}' \
+            --raw-output)
+          echo "::set-output name=output::${instances}"
 
-      # 判断是否找到实例，并决定是否继续
       - name: Check if instances exist
-        if: success()
         run: |
           if [ "$(echo "${{ steps.check_instances.outputs.output }}" | jq length)" -gt 0 ]; then
-            echo "❌ 发现正在运行/非终止状态的 VM.Standard.A1.Flex 实例，终止工作流"
+            echo "❌ 检测到正在运行或非终止状态的 VM.Standard.A1.Flex 实例"
             exit 1
           else
-            echo "✅ 没有运行中的 VM.Standard.A1.Flex 实例，继续执行"
+            echo "✅ 没有运行中的实例，继续执行"
           fi
 
       - name: Get Availability Domain Name
         id: get_availability_domain
-        if: success()
-        uses: oracle-actions/run-oci-cli-command@v1.3.2
-        with:
-          silent: false
-          command: 'iam availability-domain list --compartment-id ${{ env.COMPARTMENT_ID }}'
-          query: 'data[0]."name"'
+        run: |
+          ad=$(oci iam availability-domain list \
+            --compartment-id "${{ env.COMPARTMENT_ID }}" \
+            --query 'data[0].name' --raw-output)
+          echo "::set-output name=output::${ad}"
+          echo "✅ AD: ${ad}"
 
       - name: Get VCN ID
         id: get_vcn_id
-        if: success()
-        uses: oracle-actions/run-oci-cli-command@v1.3.2
-        with:
-          silent: false
-          command: 'network vcn list --compartment-id ${{ env.COMPARTMENT_ID }}'
-          query: 'data[0]."id"'
+        run: |
+          vcn_id=$(oci network vcn list \
+            --compartment-id "${{ env.COMPARTMENT_ID }}" \
+            --query 'data[0].id' --raw-output)
+          echo "::set-output name=output::${vcn_id}"
+          echo "✅ VCN ID: ${vcn_id}"
 
       - name: Get Subnet ID
         id: get_subnet_id
-        if: success()
-        uses: oracle-actions/run-oci-cli-command@v1.3.2
-        with:
-          silent: false
-          command: 'network subnet list --compartment-id ${{ env.COMPARTMENT_ID }} --vcn-id ${{ steps.get_vcn_id.outputs.output }}'
-          query: 'data[0]."id"'
-
-      - name: Set ssh key file
-        if: success()
         run: |
-          # 创建 SSH 公钥文件
-          echo "${{ env.SSH_PUBLIC_KEY }}" > /tmp/ssh_key.pub
+          subnet_id=$(oci network subnet list \
+            --compartment-id "${{ env.COMPARTMENT_ID }}" \
+            --vcn-id "${{ steps.get_vcn_id.outputs.output }}" \
+            --query 'data[0].id' --raw-output)
+          echo "::set-output name=output::${subnet_id}"
+          echo "✅ Subnet ID: ${subnet_id}"
 
-      # 创建实例
+      # - name: Set ssh key file
+      #   run: |
+      #     echo "${{ env.SSH_PUBLIC_KEY }}" > /tmp/ssh_key.pub
+      #     echo "✅ SSH 公钥文件已写入 /tmp/ssh_key.pub"
+
       - name: Create new Ubuntu ARM instance (4C24G)
-        if: success()
-        uses: oracle-actions/run-oci-cli-command@v1.3.2
-        with:
-          silent: false
-          command: 'compute instance launch --availability-domain ${{ steps.get_availability_domain.outputs.output }} --compartment-id ${{ env.COMPARTMENT_ID }} --shape ${{ env.INSTANCE_SHAPE }} --shape-config "{\"ocpus\": ${{ env.OCPUS }}, \"memoryInGBs\": ${{ env.MEMORY_GB }}}" --display-name "ubuntu-arm-4c24g" --image-id ${{ env.IMAGE_ID }} --subnet-id ${{ steps.get_subnet_id.outputs.output }} --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}") --assign-public-ip true'
+        run: |
+          echo "=== 正在创建新的 Ubuntu ARM 实例 ==="
+          oci compute instance launch \
+            --availability-domain "${{ steps.get_availability_domain.outputs.output }}" \
+            --compartment-id "${{ env.COMPARTMENT_ID }}" \
+            --shape "${{ env.INSTANCE_SHAPE }}" \
+            --shape-config "{\"ocpus\": ${{ env.OCPUS }}, \"memoryInGBs\": ${{ env.MEMORY_GB }}}" \
+            --display-name "ubuntu-arm-4c24g" \
+            --image-id "${{ env.IMAGE_ID }}" \
+            --subnet-id "${{ steps.get_subnet_id.outputs.output }}" \
+            --assign-public-ip true \
+            --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}")
+          echo "✅ 实例创建命令已执行"
