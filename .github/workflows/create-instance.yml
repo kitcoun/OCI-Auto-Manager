@@ -84,18 +84,34 @@ jobs:
           command: 'network subnet list --compartment-id ${{ env.COMPARTMENT_ID }} --vcn-id ${{ steps.get_vcn_id.outputs.output }}'
           query: 'data[0]."id"'
 
+      - name: Create new Ubuntu ARM instance (4C24G)
+        if: success()
+        run: |
+          # 创建 SSH 公钥文件
+          echo "${{ env.SSH_PUBLIC_KEY }}" > /tmp/ssh_key.pub
+
+          # 创建 shape config 文件
+          cat > /tmp/shape_config.json << EOF
+          {
+            "ocpus": ${{ env.OCPUS }},
+            "memoryInGBs": ${{ env.MEMORY_GB }}
+          }
+          EOF
+
       # 创建实例
       - name: Create new Ubuntu ARM instance (4C24G)
         if: success()
-        # uses: oracle-actions/run-oci-cli-command@v1.3.2
-        run: |
-          oci compute instance launch \
-            --availability-domain ${{ steps.get_availability_domain.outputs.output }} \
-            --compartment-id ${{ env.COMPARTMENT_ID }} \
-            --shape ${{ env.INSTANCE_SHAPE }} \
-            --shape-config '{"ocpus": ${{ env.OCPUS }}, "memoryInGBs": ${{ env.MEMORY_GB }}}' \
-            --display-name "ubuntu-arm-4c24g" \
-            --image-id ${{ env.IMAGE_ID }} \
-            --subnet-id ${{ steps.get_subnet_id.outputs.output }} \
-            --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}") \
-            --assign-public-ip true
+        uses: oracle-actions/run-oci-cli-command@v1.3.2
+        with:
+          silent: false
+          command: >
+            oci compute instance launch \
+              --availability-domain ${{ steps.get_availability_domain.outputs.output }} \
+              --compartment-id ${{ env.COMPARTMENT_ID }} \
+              --shape ${{ env.INSTANCE_SHAPE }} \
+              --shape-config /tmp/shape_config.json \
+              --display-name "ubuntu-arm-4c24g" \
+              --image-id ${{ env.IMAGE_ID }} \
+              --subnet-id ${{ steps.get_subnet_id.outputs.output }} \
+              --ssh-authorized-keys-file /tmp/ssh_key.pub \
+              --assign-public-ip true
