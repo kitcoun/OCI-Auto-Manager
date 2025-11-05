@@ -36,13 +36,6 @@ jobs:
       # - name: Install dependencies
       #   run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Retrieve the OCID of a named compartment in tenancy
-        uses: oracle-actions/run-oci-cli-command@v1.3.2
-        id: find-compartment-id
-        with:
-          command: 'iam compartment list --compartment-id-in-subtree=true'
-          query: "data[?name=='testing'].id"
-
       # 检查是否存在运行中的VM.Standard.A1.Flex实例
       - name: Check VM.Standard.A1.Flex instance existence
         uses: oracle-actions/run-oci-cli-command@v1.3.2
