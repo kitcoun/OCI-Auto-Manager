@@ -96,6 +96,6 @@ jobs:
             --shape-config '{"ocpus": ${{ env.OCPUS }}, "memoryInGBs": ${{ env.MEMORY_GB }}}' \
             --display-name "ubuntu-arm-4c24g" \
             --image-id "${{ env.IMAGE_ID }}" \
-            --subnet-id "${{ steps.get_subnet_id.outputs.output }}" \
+            --subnet-id ${{ steps.get_subnet_id.outputs.output }} \
             --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}") \
             --assign-public-ip true
