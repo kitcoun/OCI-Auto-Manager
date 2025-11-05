@@ -3,7 +3,7 @@ name: OCI Ubuntu ARM Instance Auto-Manager
 # 触发条件
 on:
   schedule:
-    - cron: '0 */1 * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
       manual_trigger_reason:
