@@ -25,6 +25,7 @@ jobs:
       INSTANCE_SHAPE: "VM.Standard.A1.Flex"
       OCPUS: 4
       MEMORY_GB: 24
+      EXPECTED_ERRORS: [\"Out of host capacity.\", \"Too many requests for the user\", \"The connection to endpoint timed out.\"]
 
     steps:
       - name: Checkout code
@@ -103,8 +104,10 @@ jobs:
           echo "✅ Subnet ID: ${subnet_id}"
 
       - name: Create new Ubuntu ARM instance (4C24G)
+        id: created_ubuntu
         run: |
           echo "=== 正在创建新的 Ubuntu ARM 实例 ==="
+          set +e
           instance_response=$(oci compute instance launch \
             --availability-domain "${{ steps.get_availability_domain.outputs.output }}" \
             --compartment-id "${{ env.COMPARTMENT_ID }}" \
@@ -116,9 +119,31 @@ jobs:
             --assign-public-ip true \
             --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}"))
 
-          if [ -z "$instance_response" ]; then
-            echo "❌ 实例创建失败，响应为空"
-            exit 1
-          fi
+          error_message=$(echo "$instance_response" | jq -r '.message // empty')
+          echo "error_message=${error_message}" >> $GITHUB_OUTPUT
 
-          echo "✅ 实例创建命令已执行"
+          echo "✅ 实例创建命令已执行：${instance_response}"
+
+          set -e
+
+      - name: Check error message
+        run: |
+          # Function to handle error checking
+          error_message=${{ steps.created_ubuntu.outputs.output }}
+          if [[ -n "$error_message" ]]; then
+            echo "⚠️ OCI 返回的错误: $error_message"
+
+            # Check if the error message is in the expected errors list
+            in_expected=$(echo '${{ env.EXPECTED_ERRORS }}' | jq --arg msg "$error_message" -e '.[] | select(. == $msg)' > /dev/null; echo $?)
+
+            # If the error is not in the expected list, trigger failure (throwing exception)
+            if [[ "$in_expected" -ne 0 ]]; then
+              echo "❌ 遇到意外的错误: $error_message"
+              echo "自定义异常: 这个错误是不预期的。"
+              exit 1  # 触发失败
+            else
+              echo "✅ 预期的错误发生，继续执行工作流。"
+            fi
+          else
+            echo "✅ 实例成功创建。"
+          fi
