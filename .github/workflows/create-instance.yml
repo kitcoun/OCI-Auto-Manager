@@ -43,7 +43,7 @@ jobs:
         with:
           silent: false
           command: 'compute instance list --compartment-id ${{ env.COMPARTMENT_ID }}'
-          query: "data[?shape=='VM.Standard.A1.Flex' && \"lifecycle-state\"!='TERMINATED'].id"
+          query: 'data[?shape==`VM.Standard.A1.Flex`].{id:id, name:\"display-name\", shape:shape, state:\"lifecycle-state\"}'
 
       # 判断是否找到实例，并决定是否继续
       - name: Check if instances exist
