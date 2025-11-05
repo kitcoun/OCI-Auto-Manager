@@ -58,6 +58,7 @@ jobs:
           fi
 
       - name: Get Availability Domain Name
+        id: get_availability_domain
         if: success()
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
@@ -66,6 +67,7 @@ jobs:
           query: 'data[0]."name"'
 
       - name: Get VCN ID
+        id: get_vcn_id
         if: success()
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
@@ -74,6 +76,7 @@ jobs:
           query: 'data[0]."id"'
 
       - name: Get Subnet ID
+        id: get_subnet_id
         if: success()
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
