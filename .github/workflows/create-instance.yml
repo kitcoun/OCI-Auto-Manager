@@ -99,5 +99,5 @@ jobs:
               --display-name "ubuntu-arm-4c24g-$(date +%Y%m%d-%H%M%S)" \
               --image-id ${{ env.IMAGE_ID }} \
               --subnet-id ${{ steps.get_subnet_id.outputs.output }} \
-              --ssh-authorized-keys-file <(echo ${{ env.SSH_PUBLIC_KEY }}) \
+              --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}") \
               --assign-public-ip true
