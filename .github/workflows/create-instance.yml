@@ -50,7 +50,7 @@ jobs:
       - name: Check if instances exist
         if: success()
         run: |
-          if [ -n "${{ steps.check_instances.outputs.output }}" ]; then
+          if [ "$(echo "${{ steps.check_instances.outputs.output }}" | jq length)" -gt 0 ]; then
             echo "❌ 发现正在运行/非终止状态的 VM.Standard.A1.Flex 实例，终止工作流"
             exit 1
           else
