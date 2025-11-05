@@ -25,7 +25,7 @@ jobs:
       INSTANCE_SHAPE: "VM.Standard.A1.Flex"
       OCPUS: 4
       MEMORY_GB: 24
-      EXPECTED_ERRORS: [\"Out of host capacity.\", \"Too many requests for the user\", \"The connection to endpoint timed out.\"]
+      EXPECTED_ERRORS: '[\"Out of host capacity.\", \"Too many requests for the user\", \"The connection to endpoint timed out.\"]'
 
     steps:
       - name: Checkout code
@@ -120,7 +120,7 @@ jobs:
             --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}"))
 
           error_message=$(echo "$instance_response" | jq -r '.message // empty')
-          
+
           echo "error_message=${error_message}" >> $GITHUB_OUTPUT
 
           echo "✅ 实例创建命令已执行：${instance_response}"
