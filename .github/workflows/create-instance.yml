@@ -20,92 +20,137 @@ jobs:
     steps:
       # 检出代码
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      # 设置 Oracle CLI
-      - name: Set up OCI CLI
-        run: |
-          # 下载并安装OCI CLI
-          curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh | bash -s -- --accept-all-defaults
-          
-          # 配置环境变量
-          echo 'export PATH=$HOME/bin:$PATH' >> ~/.bashrc
-          source ~/.bashrc
-          # 将 $HOME/bin 写入 GITHUB_PATH，确保后续步骤可以直接使用 oci
-          echo "$HOME/bin" >> $GITHUB_PATH
-          # 立即把 $HOME/bin 加入当前 PATH，使得本步骤可以立刻使用 oci
-          export PATH="$HOME/bin:$PATH"
+      # 安装jq（用于JSON处理）
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq
 
-      # 认证 OCI CLI
-      - name: Configure OCI CLI
-        env:
-          OCI_CLI_AUTH: api_key
-        run: |
-          oci setup config \
-            --user ${{ secrets.OCI_USER }} \
-            --tenancy ${{ secrets.OCI_TENANCY }} \
-            --fingerprint ${{ secrets.OCI_FINGERPRINT }} \
-            --region ${{ secrets.OCI_REGION }}
-            --key-file ${{ secrets.OCI_PRIVATE_KEY }} \
-
-      # 检测 VM.Standard.A1.Flex实例已存在
+      # 检查是否存在运行中的VM.Standard.A1.Flex实例
       - name: Check VM.Standard.A1.Flex instance existence
-        run: |
-          echo "=== 检查是否存在任何 VM.Standard.A1.Flex 实例（TERMINATED 可忽略） ==="
-          
-          # 获取实例列表，过滤出 shape 为 VM.Standard.A1.Flex 的实例
-          instances_json=$(oci compute instance list \
-            --compartment-id "${{ secrets.OCI_TENANCY }}" \
-            --query 'data[?shape==`VM.Standard.A1.Flex`].{id:id, name:"display-name", shape:shape, state:"lifecycle-state"}' \
-            --raw-output)
-          
-          # 过滤掉 lifecycle-state 为 TERMINATED 的实例
-          non_terminated_json=$(echo "$instances_json" | jq '[.[] | select(.state != "TERMINATED")]')
-          non_terminated_count=$(echo "$non_terminated_json" | jq 'length')
-          
-          if [ "$non_terminated_count" -gt 0 ]; then
-            echo "❌ 发现正在运行/非终止状态的 VM.Standard.A1.Flex 实例，终止工作流"
-            exit 1
-          else
-            echo "✅ 没有运行中的 VM.Standard.A1.Flex 实例，继续执行"
-          fi
-
-      - name: Create new Ubuntu ARM instance (4C24G)
-        run: |
-          echo "=== 创建新的Ubuntu ARM实例 ==="
-          ad=$(oci iam availability-domain list --compartment-id ${{ secrets.OCI_TENANCY }} --query 'data[0]."name"' --raw-output)
-          image_id=$(oci compute image list \
-            --compartment-id "${{ secrets.OCI_TENANCY }}" \
-            --operating-system "Canonical Ubuntu" \
-            --operating-system-version "22.04" \
-            --all --query "data[0].id" --raw-output)
+        uses: oracle-actions/run-oci-cli-command@v1
+        id: check_instances
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_USER }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_TENANCY }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_PRIVATE_KEY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_REGION }}
+          COMPARTMENT_ID: ${{ secrets.OCI_TENANCY }}
+        with:
+          command: |
+            echo "=== 检查是否存在任何 VM.Standard.A1.Flex 实例（TERMINATED 可忽略） ==="
             
-          vcn_id="ocid1.image.oc1.ap-singapore-1.aaaaaaaa5a3xwkk5vaichk47fms2uzvsqeriats2uorf6kwgq3l3nwrbhipa"
-          subnet_id=$(oci network subnet list --compartment-id ${{ secrets.OCI_TENANCY }} --vcn-id $vcn_id --query 'data[0]."id"' --raw-output)
+            # 获取实例列表，过滤出 shape 为 VM.Standard.A1.Flex 的实例
+            instances_json=$(oci compute instance list \
+              --compartment-id "$COMPARTMENT_ID" \
+              --query 'data[?shape==`VM.Standard.A1.Flex`].{id:id, name:"display-name", shape:shape, state:"lifecycle-state"}' \
+              --raw-output)
+            
+            # 过滤掉 lifecycle-state 为 TERMINATED 的实例
+            non_terminated_json=$(echo "$instances_json" | jq '[.[] | select(.state != "TERMINATED")]')
+            non_terminated_count=$(echo "$non_terminated_json" | jq 'length')
+            
+            echo "发现 $non_terminated_count 个非终止状态的 VM.Standard.A1.Flex 实例"
+            
+            if [ "$non_terminated_count" -gt 0 ]; then
+              echo "❌ 发现正在运行/非终止状态的 VM.Standard.A1.Flex 实例，终止工作流"
+              echo "INSTANCES_FOUND=true" >> $GITHUB_ENV
+              exit 1
+            else
+              echo "✅ 没有运行中的 VM.Standard.A1.Flex 实例，继续执行"
+              echo "INSTANCES_FOUND=false" >> $GITHUB_ENV
+            fi
 
-          instance_name="ubuntu-arm-4c24g-$(date +%Y%m%d-%H%M%S)"
-          echo "实例名称：$instance_name"
-          
-          if [ -z "${{ secrets.SSH_PUBLIC_KEY }}" ]; then
-            echo "❌ SSH_PUBLIC_KEY is empty."
-            exit 1
-          fi
+      # 创建新的Ubuntu ARM实例
+      - name: Create new Ubuntu ARM instance (4C24G)
+        if: env.INSTANCES_FOUND == 'false'
+        uses: oracle-actions/run-oci-cli-command@v1
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_USER }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_TENANCY }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_PRIVATE_KEY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_REGION }}
+          COMPARTMENT_ID: ${{ secrets.OCI_TENANCY }}
+          image_id: "ocid1.image.oc1.ap-singapore-1.aaaaaaaa5a3xwkk5vaichk47fms2uzvsqeriats2uorf6kwgq3l3nwrbhipa"
+          SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+        with:
+          command: |
+            echo "=== 创建新的Ubuntu ARM实例 ==="
+            
+            # 获取可用域
+            ad=$(oci iam availability-domain list --compartment-id "$COMPARTMENT_ID" --query 'data[0]."name"' --raw-output)
+            echo "可用域: $ad"
 
-          instance_response=$(oci compute instance launch \
-            --availability-domain "$ad" \
-            --compartment-id "${{ secrets.OCI_TENANCY }}" \
-            --shape "VM.Standard.A1.Flex" \
-            --shape-config '{"ocpus": 4, "memoryInGBs": 24}' \
-            --display-name "$instance_name" \
-            --image-id "$image_id" \
-            --subnet-id "$subnet_id" \
-            --ssh-authorized-keys-file <(echo "${{ secrets.SSH_PUBLIC_KEY }}") \
-            --assign-public-ip true)
+            echo "镜像ID: $image_id"
 
-          instance_id=$(echo "$instance_response" | jq -r '.id')
-          public_ip=$(oci compute instance list-vnics --instance-id "$instance_id" --query 'data[0]."public-ip"' --raw-output)
+            vcn_id=$(oci network vcn list --compartment-id <COMPARTMENT_ID> --query 'data[0]."id"' --raw-output)
+            echo "虚拟云网络ID: $vcn_id"
+            
+            # 获取子网ID
+            subnet_id=$(oci network subnet list --compartment-id "$COMPARTMENT_ID" --vcn-id "$vcn_id" --query 'data[0]."id"' --raw-output)
+            echo "子网ID: $subnet_id"
 
-          echo "实例连接信息："
-          echo "- 实例ID：$instance_id"
-          echo "- 公网IP：$public_ip"
-          echo "- SSH连接命令：ssh ubuntu@$public_ip"
+            # 生成实例名称
+            instance_name="ubuntu-arm-4c24g-$(date +%Y%m%d-%H%M%S)"
+            echo "实例名称：$instance_name"
+            
+            # 检查SSH公钥
+            if [ -z "$SSH_PUBLIC_KEY" ]; then
+              echo "❌ SSH_PUBLIC_KEY is empty."
+              exit 1
+            fi
+
+            # 启动实例
+            echo "正在启动实例..."
+            instance_response=$(oci compute instance launch \
+              --availability-domain "$ad" \
+              --compartment-id "$COMPARTMENT_ID" \
+              --shape "VM.Standard.A1.Flex" \
+              --shape-config '{"ocpus": 4, "memoryInGBs": 24}' \
+              --display-name "$instance_name" \
+              --image-id "$image_id" \
+              --subnet-id "$subnet_id" \
+              --ssh-authorized-keys-file <(echo "$SSH_PUBLIC_KEY") \
+              --assign-public-ip true \
+              --raw-output)
+
+            # 提取实例信息
+            instance_id=$(echo "$instance_response" | jq -r '.id')
+            echo "实例ID: $instance_id"
+            
+            # 等待实例启动并获取公网IP
+            echo "等待实例启动..."
+            sleep 30
+            
+            # 获取公网IP
+            public_ip=$(oci compute instance list-vnics --instance-id "$instance_id" --query 'data[0]."public-ip"' --raw-output)
+            
+            # 输出连接信息
+            echo "=== 实例创建完成 ==="
+            echo "实例名称: $instance_name"
+            echo "实例ID: $instance_id"
+            echo "公网IP: $public_ip"
+            echo "SSH连接命令: ssh ubuntu@$public_ip"
+            
+            # 设置输出变量供后续步骤使用
+            echo "INSTANCE_NAME=$instance_name" >> $GITHUB_ENV
+            echo "INSTANCE_ID=$instance_id" >> $GITHUB_ENV
+            echo "PUBLIC_IP=$public_ip" >> $GITHUB_ENV
+
+      # 发送通知（可选）
+      - name: Send notification
+        if: env.INSTANCES_FOUND == 'false'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          fields: workflow,job,commit,repo,ref,author
+          text: |
+            新的Ubuntu ARM实例已创建:
+            - 名称: ${{ env.INSTANCE_NAME }}
+            - ID: ${{ env.INSTANCE_ID }}
+            - 公网IP: ${{ env.PUBLIC_IP }}
+            - SSH连接: ssh ubuntu@${{ env.PUBLIC_IP }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
