@@ -101,7 +101,7 @@ jobs:
               --availability-domain ${{ steps.get_availability_domain.outputs.output }} \
               --compartment-id ${{ env.COMPARTMENT_ID }} \
               --shape ${{ env.INSTANCE_SHAPE }} \
-              --shape-config '{"ocpus": ${{ env.OCPUS }}, "memoryInGBs": ${{ env.MEMORY_GB }} }' \
+              --shape-config '{"ocpus": ${{ env.OCPUS }}, "memoryInGBs": ${{ env.MEMORY_GB }}}' \
               --display-name "ubuntu-arm-4c24g" \
               --image-id ${{ env.IMAGE_ID }} \
               --subnet-id ${{ steps.get_subnet_id.outputs.output }} \
