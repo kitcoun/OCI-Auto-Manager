@@ -44,7 +44,7 @@ jobs:
         run: |
           mkdir -p ~/.oci
           echo "${{ env.SSH_PUBLIC_KEY }}" > /tmp/oci_api_key.pub
-          chmod 600 ~/.oci/oci_api_key.pem
+          chmod 600 /tmp/oci_api_key.pub
           cat > ~/.oci/config <<EOF
           [DEFAULT]
           user=${{ env.OCI_CLI_USER }}
