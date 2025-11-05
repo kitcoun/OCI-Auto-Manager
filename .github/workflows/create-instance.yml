@@ -44,6 +44,7 @@ jobs:
         run: |
           mkdir -p ~/.oci
           echo "${{ env.SSH_PUBLIC_KEY }}" > /tmp/oci_api_key.pub
+          echo "***" >> /tmp/oci_api_key.pub
           chmod 600 /tmp/oci_api_key.pub
           cat > ~/.oci/config <<EOF
           [DEFAULT]
@@ -62,7 +63,7 @@ jobs:
             --compartment-id "${{ env.COMPARTMENT_ID }}" \
             --query 'data[?shape==`VM.Standard.A1.Flex`].{id:id, name:"display-name", shape:shape, state:"lifecycle-state"}' \
             --raw-output)
-          echo "::set-output name=output::${instances}"
+          echo "output=${instances}" >> $GITHUB_OUTPUT
 
       - name: Check if instances exist
         run: |
@@ -79,7 +80,7 @@ jobs:
           ad=$(oci iam availability-domain list \
             --compartment-id "${{ env.COMPARTMENT_ID }}" \
             --query 'data[0].name' --raw-output)
-          echo "::set-output name=output::${ad}"
+          echo "output=${ad}" >> $GITHUB_OUTPUT
           echo "✅ AD: ${ad}"
 
       - name: Get VCN ID
@@ -88,7 +89,7 @@ jobs:
           vcn_id=$(oci network vcn list \
             --compartment-id "${{ env.COMPARTMENT_ID }}" \
             --query 'data[0].id' --raw-output)
-          echo "::set-output name=output::${vcn_id}"
+          echo "output=${vcn_id}" >> $GITHUB_OUTPUT
           echo "✅ VCN ID: ${vcn_id}"
 
       - name: Get Subnet ID
@@ -98,18 +99,13 @@ jobs:
             --compartment-id "${{ env.COMPARTMENT_ID }}" \
             --vcn-id "${{ steps.get_vcn_id.outputs.output }}" \
             --query 'data[0].id' --raw-output)
-          echo "::set-output name=output::${subnet_id}"
+          echo "output=${subnet_id}" >> $GITHUB_OUTPUT
           echo "✅ Subnet ID: ${subnet_id}"
-
-      # - name: Set ssh key file
-      #   run: |
-      #     echo "${{ env.SSH_PUBLIC_KEY }}" > /tmp/ssh_key.pub
-      #     echo "✅ SSH 公钥文件已写入 /tmp/ssh_key.pub"
 
       - name: Create new Ubuntu ARM instance (4C24G)
         run: |
           echo "=== 正在创建新的 Ubuntu ARM 实例 ==="
-          oci compute instance launch \
+          instance_response=$(oci compute instance launch \
             --availability-domain "${{ steps.get_availability_domain.outputs.output }}" \
             --compartment-id "${{ env.COMPARTMENT_ID }}" \
             --shape "${{ env.INSTANCE_SHAPE }}" \
@@ -118,5 +114,11 @@ jobs:
             --image-id "${{ env.IMAGE_ID }}" \
             --subnet-id "${{ steps.get_subnet_id.outputs.output }}" \
             --assign-public-ip true \
-            --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}")
+            --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}"))
+
+          if [ -z "$instance_response" ]; then
+            echo "❌ 实例创建失败，响应为空"
+            exit 1
+          fi
+
           echo "✅ 实例创建命令已执行"
