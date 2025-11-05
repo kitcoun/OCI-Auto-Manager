@@ -47,6 +47,7 @@ jobs:
 
       # 判断是否找到实例，并决定是否继续
       - name: Check if instances exist
+        if: success()
         run: |
           if [ -n "${{ steps.check_instances.outputs.output }}" ]; then
             echo "❌ 发现正在运行/非终止状态的 VM.Standard.A1.Flex 实例，终止工作流"
@@ -55,34 +56,36 @@ jobs:
             echo "✅ 没有运行中的 VM.Standard.A1.Flex 实例，继续执行"
           fi
 
-      # 创建新的Ubuntu ARM实例
-      - name: Create new Ubuntu ARM instance (4C24G)
-        if: success()  # 如果上一步成功，继续执行
+      - name: Get Availability Domain Name
+        if: success()
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
-          command: 'iam availability-domain list --compartment-id ${{ env.OCI_TENANCY }}'
+          command: 'iam availability-domain list --compartment-id ${{ env.COMPARTMENT_ID }}'
           query: 'data[0]."name"'
 
       - name: Get VCN ID
+        if: success()
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
-          command: 'network vcn list --compartment-id ${{ env.OCI_TENANCY }}'
+          command: 'network vcn list --compartment-id ${{ env.COMPARTMENT_ID }}'
           query: 'data[0]."id"'
 
       - name: Get Subnet ID
+        if: success()
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
-          command: 'network subnet list --compartment-id ${{ env.OCI_TENANCY }} --vcn-id ${{ steps.get_vcn_id.outputs.output }}'
+          command: 'network subnet list --compartment-id ${{ env.COMPARTMENT_ID }} --vcn-id ${{ steps.get_vcn_id.outputs.output }}'
           query: 'data[0]."id"'
 
       # 创建实例
-      - name: Launch new instance
+      - name: Create new Ubuntu ARM instance (4C24G)
+        if: success()
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
           command: |
             compute instance launch \
               --availability-domain ${{ steps.get_availability_domain.outputs.output }} \
-              --compartment-id ${{ env.OCI_TENANCY }} \
+              --compartment-id ${{ env.COMPARTMENT_ID }} \
               --shape ${{ env.INSTANCE_SHAPE }} \
               --shape-config "{\"ocpus\": $OCPUS, \"memoryInGBs\": $MEMORY_GB}" \
               --display-name "ubuntu-arm-4c24g-$(date +%Y%m%d-%H%M%S)" \
