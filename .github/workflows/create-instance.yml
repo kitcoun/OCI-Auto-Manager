@@ -158,3 +158,13 @@ jobs:
           else
             echo "✅ 实例成功创建。"
           fi
+          
+      - name: Cleanup OCI configuration
+        if: always()
+        run: |
+          echo "🧹 清理 OCI 配置文件和临时文件..."
+          rm -f /tmp/oci_api_key.pub
+          rm -f ~/.oci/config
+          # 如果目录为空，也删除 .oci 目录
+          rmdir ~/.oci 2>/dev/null || true
+          echo "✅ 清理完成"
