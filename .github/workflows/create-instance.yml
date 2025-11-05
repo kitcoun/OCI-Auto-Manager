@@ -1,3 +1,4 @@
+# https://github.com/oracle-actions/run-oci-cli-command/
 name: OCI Ubuntu ARM Instance Auto-Manager
 
 # 触发条件
