@@ -1,4 +1,4 @@
-name: Check and Manage Oracle Cloud Instances
+name: Check Oracle Cloud
 
 on:
   # schedule:

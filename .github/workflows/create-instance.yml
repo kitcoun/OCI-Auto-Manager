@@ -1,4 +1,4 @@
-name: OCI Ubuntu ARM Instance Auto-Manager
+name: Ubuntu ARM Instance
 
 on:
   schedule:
