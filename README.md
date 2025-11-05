@@ -39,7 +39,6 @@
 ---
 
 ## 所需 GitHub Secrets 说明
-[点此设置](/OCI-Auto-Manager/settings/secrets/actions)
 | 名称              | 说明                                                         | 示例/获取方式 |
 |-------------------|--------------------------------------------------------------|--------------|
 | **OCI_USER**      | Oracle Cloud 用户唯一标识符<br>控制台 → 用户设置 → 用户OCID  | `ocid1.user.oc1..aaaaaaaaxxxxxxxx` |
@@ -66,7 +65,7 @@
 
 ---
 
-## 手动测试 [示例](/wiki)
+## 手动测试 [示例](https://github.com/kitcoun/OCI-Auto-Manager/wiki)
 > 在Oracle Cloud 控制台-实例-右上角开发人员工具-Cloud Shell
 
 > 输入OCI代码
