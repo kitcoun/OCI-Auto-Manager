@@ -14,6 +14,12 @@ on:
 jobs:
   check-instances:
     runs-on: ubuntu-latest
+    env:
+      OCI_CLI_USER: ${{ secrets.OCI_USER }}
+      OCI_CLI_TENANCY: ${{ secrets.OCI_TENANCY }}
+      OCI_CLI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+      OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_PRIVATE_KEY }}
+      OCI_CLI_REGION: ${{ secrets.OCI_REGION }}
 
     steps:
       # 检出代码
@@ -23,15 +29,9 @@ jobs:
       # Oracle 官方提供的GitHub Action
       - name: Run OCI CLI command
         uses: oracle-actions/run-oci-cli-command@v1
-        env:
-          OCI_CLI_USER: ${{ secrets.OCI_USER }}
-          OCI_CLI_TENANCY: ${{ secrets.OCI_TENANCY }}
-          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
-          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_PRIVATE_KEY }}
-          OCI_CLI_REGION: ${{ secrets.OCI_REGION }}
         with:
           # 这里可以放任何OCI CLI命令
-          # command: os ns get  # 示例：获取对象存储命名空间
+          command: os ns get  # 示例：获取对象存储命名空间
 
       # 获取实例列表并检查资源使用情况
       - name: Get Instances and Check Resources

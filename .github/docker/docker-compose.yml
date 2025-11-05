@@ -1,0 +1,15 @@
+services:
+  act:
+    build: .
+    container_name: github-act-runner
+    working_dir: /github/workspace
+    volumes:
+      # 挂载整个项目目录
+      - ../../:/github/workspace
+      - ./tmp/act-cache:/var/act-cache
+    environment:
+      - ACT_CACHE_DIR=/var/act-cache
+      # 设置Docker主机为宿主机的Docker守护进程
+      - DOCKER_HOST=tcp://host.docker.internal:2375
+    # 使用特权模式可能有助于某些操作，但不是必须的
+    # privileged: true
