@@ -14,8 +14,6 @@ on:
 jobs:
   manage-oci-instances:
     runs-on: ubuntu-latest
-    environment: production
-    timeout-minutes: 30    
     env:
       OCI_CLI_USER: ${{ secrets.OCI_USER }}
       OCI_CLI_TENANCY: ${{ secrets.OCI_TENANCY }}
@@ -38,12 +36,19 @@ jobs:
       # - name: Install dependencies
       #   run: sudo apt-get update && sudo apt-get install -y jq
 
+      - name: Retrieve the OCID of a named compartment in tenancy
+        uses: oracle-actions/run-oci-cli-command@v1.3.2
+        id: find-compartment-id
+        with:
+          command: 'iam compartment list --compartment-id-in-subtree=true'
+          query: "data[?name=='testing'].id"
+
       # 检查是否存在运行中的VM.Standard.A1.Flex实例
       - name: Check VM.Standard.A1.Flex instance existence
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         id: check_instances
         with:
-          command: 'compute instance list --compartment-id ${{ secrets.OCI_TENANCY }}'
+          command: 'compute instance list --compartment-id ${{ steps.find-compartment-id.outputs.raw_output }}'
           query: 'data[?shape==`VM.Standard.A1.Flex` && lifecycle-state!=`TERMINATED`].id'
 
       # 判断是否找到实例，并决定是否继续
