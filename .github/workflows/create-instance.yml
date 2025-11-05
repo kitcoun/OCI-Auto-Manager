@@ -101,8 +101,8 @@ jobs:
               --availability-domain ${{ steps.get_availability_domain.outputs.output }} \
               --compartment-id ${{ env.COMPARTMENT_ID }} \
               --shape ${{ env.INSTANCE_SHAPE }} \
-              --shape-config "{\"ocpus\": $OCPUS, \"memoryInGBs\": $MEMORY_GB}" \
-              --display-name "ubuntu-arm-4c24g-$(date +%Y%m%d-%H%M%S)" \
+              --shape-config "{"ocpus": ${{ env.OCPUS }}, "memoryInGBs": ${{ env.MEMORY_GB }}" \
+              --display-name "ubuntu-arm-4c24g" \
               --image-id ${{ env.IMAGE_ID }} \
               --subnet-id ${{ steps.get_subnet_id.outputs.output }} \
               --ssh-authorized-keys-file /tmp/ssh_key.pub \
