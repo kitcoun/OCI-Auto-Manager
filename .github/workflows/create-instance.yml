@@ -43,7 +43,7 @@ jobs:
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         id: check_instances
         with:
-          command: 'oci compute instance list --compartment-id ${{ secrets.OCI_TENANCY }}'
+          command: 'compute instance list --compartment-id ${{ secrets.OCI_TENANCY }}'
           query: 'data[?shape==`VM.Standard.A1.Flex` && lifecycle-state!=`TERMINATED`].id'
 
       # 判断是否找到实例，并决定是否继续
@@ -61,19 +61,19 @@ jobs:
         if: success()  # 如果上一步成功，继续执行
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
-          command: 'oci iam availability-domain list --compartment-id ${{ secrets.OCI_TENANCY }}'
+          command: 'iam availability-domain list --compartment-id ${{ secrets.OCI_TENANCY }}'
           query: 'data[0]."name"'
 
       - name: Get VCN ID
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
-          command: 'oci network vcn list --compartment-id ${{ secrets.OCI_TENANCY }}'
+          command: 'network vcn list --compartment-id ${{ secrets.OCI_TENANCY }}'
           query: 'data[0]."id"'
 
       - name: Get Subnet ID
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
-          command: 'oci network subnet list --compartment-id ${{ secrets.OCI_TENANCY }} --vcn-id ${{ steps.get_vcn_id.outputs.output }}'
+          command: 'network subnet list --compartment-id ${{ secrets.OCI_TENANCY }} --vcn-id ${{ steps.get_vcn_id.outputs.output }}'
           query: 'data[0]."id"'
 
       # 创建实例
@@ -81,7 +81,7 @@ jobs:
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
           command: |
-            oci compute instance launch \
+            compute instance launch \
               --availability-domain ${{ steps.get_availability_domain.outputs.output }} \
               --compartment-id ${{ secrets.OCI_TENANCY }} \
               --shape "$INSTANCE_SHAPE" \
