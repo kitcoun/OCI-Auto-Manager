@@ -86,6 +86,7 @@ jobs:
         if: success()
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
+          silent: false
           command: |
             compute instance launch \
               --availability-domain ${{ steps.get_availability_domain.outputs.output }} \
