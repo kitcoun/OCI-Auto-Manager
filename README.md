@@ -2,6 +2,14 @@
 # OCI ARM 实例自动管理脚本
 免费限制：https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm?utm_source=chatgpt.com
 
+· 示例说明
+假设你有一个非 A1 形状的实例：
+如果 7 天内 95% 的时间 CPU 利用率为 15%，同时网络利用率为 18% → 会被视为闲置
+如果 7 天内 90% 的时间 CPU 利用率为 15%，5% 的时间为 25% → 不会被视为闲置
+如果 CPU 利用率始终低于 20%，但网络利用率始终高于 20% → 不会被视为闲置
+
+回收方式：通常是先停止实例，而不是直接删除，用户可以手动重启
+
 ## 功能简介
 - 每小时自动检查租户是否存在实例
 - 若无实例则自动创建新的 Ubuntu ARM 实例（4C24G）
@@ -18,24 +26,23 @@
 
 ### 执行逻辑
 1. 检查租户中是否存在任何实例（所有状态都会检查）
-2. 如果发现任何实例存在：
+2. 如果发现`VM.Standard.A1.Flex`实例存在：
 	- 立即终止工作流
 	- 不进行任何实例操作
-3. 如果确认没有任何实例：
+3. 如果确认没有`VM.Standard.A1.Flex`实例：
 	- 创建新的 Ubuntu ARM 实例
 	- 配置 4 OCPU 和 24GB 内存
 	- 分配公网 IP
 	- 注入 SSH 密钥
 
 ### 使用限制
-- 每个租户同一时间只允许存在一个实例
-- 创建新实例前必须确保无其他实例存在
+- 每个租户同一时间只允许存在一个`VM.Standard.A1.Flex`实例
 - 实例规格严格遵守免费套餐限制
 
 ---
 
 ## 所需 GitHub Secrets 说明
-
+[点此设置](/OCI-Auto-Manager/settings/secrets/actions)
 | 名称              | 说明                                                         | 示例/获取方式 |
 |-------------------|--------------------------------------------------------------|--------------|
 | **OCI_USER**      | Oracle Cloud 用户唯一标识符<br>控制台 → 用户设置 → 用户OCID  | `ocid1.user.oc1..aaaaaaaaxxxxxxxx` |
@@ -62,26 +69,12 @@
 
 ---
 
-## 手动测试
+## 手动测试 [示例](/wiki)
 > 在Oracle Cloud 控制台-实例-右上角开发人员工具-Cloud Shell
 
-示例:把中文替换相关参数
-```
-oci compute instance launch \
-	--availability-domain "可用性域" \
-	--compartment-id "租户唯一标识符" \
-	--shape "VM.Standard.A1.Flex" \
-	--shape-config '{"ocpus": 4, "memoryInGBs": 24}' \
-	--display-name "ubuntu-arm-4c24g-20251013-061336" \
-	--image-id "镜像ID" \
-	--subnet-id "网络配置ID" \
-	--ssh-authorized-keys-file <(echo "SSH 登录的公钥") \
-	--assign-public-ip true \
-	--query 'data' \
-	--raw-output
-```
+> 输入OCI代码
 
-## 邮件通知与 Secrets 配置（新增功能说明）
+## 邮件通知与 Secrets 配置（已删除功能）
 
 本仓库的 GitHub Actions 工作流在尝试创建实例时，会捕获创建实例的返回的错误/消息并与仓库根目录的 `message.json` 中配置的字符串进行匹配。
 
@@ -97,25 +90,6 @@ oci compute instance launch \
 - `SMTP_USERNAME`：SMTP 用户名（通常为发件邮箱）
 - `SMTP_PASSWORD`：SMTP 密码或应用专用密码
 - `EMAIL_TO`：邮件接收地址（可用逗号分隔多个）
-
-
-## 安全注意事项
-
-- 所有 Secrets 都应严格保密，不要在代码中硬编码
-- 定期轮换 API 密钥和 SSH 密钥（建议每 3-6 个月）
-- 为 OCI 用户分配最小必要权限
-- 启用 GitHub 仓库的分支保护和访问控制
-
-* GitHub Actions Workflow 触发方式说明
-- 什么是 Fork 和 PR？
-- Fork：复制别人的仓库到您自己的 GitHub 账户下
-- PR (Pull Request)：从您的 fork 仓库向原仓库提交代码更改请求
-- 为什么会有这个限制？
-- 这是 GitHub 的安全保护机制：
-- 当您从 fork 仓库发起 PR 时，GitHub 默认不会将原仓库的 Secrets（敏感信息）传递给 fork 仓库的 workflow
-- 这样可以防止恶意代码通过 PR 获取原仓库的敏感数据（比如我们配置的 Oracle Cloud API 密钥）
-
-
 ---
 
-如需详细操作步骤或遇到问题，请参考 Oracle Cloud 官方文档或联系仓库维护者。
+如需详细操作步骤或遇到问题，请参考 Oracle Cloud 官方文档。

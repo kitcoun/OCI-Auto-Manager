@@ -1,0 +1,94 @@
+name: Check and Manage Oracle Cloud Instances
+
+on:
+  # schedule:
+  #   - cron: '0 0 * * *'  # 每天执行一次，你可以根据需要修改
+  # workflow_dispatch:
+  #   inputs:
+  #     manual_trigger_reason:
+  #       description: '手动触发原因'
+  #       required: false
+  #       default: '测试或紧急操作'
+
+
+jobs:
+  check-instances:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # 设置 Oracle CLI
+      - name: Set up OCI CLI
+        run: |
+          curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh | bash
+          source ~/.bash_profile
+
+      # 认证 OCI CLI
+      - name: Configure OCI CLI
+        env:
+          OCI_CLI_AUTH: api_key
+        run: |
+          oci setup config \
+            --user ${{ secrets.OCI_USER }} \
+            --tenancy ${{ secrets.OCI_TENANCY }} \
+            --fingerprint ${{ secrets.OCI_FINGERPRINT }} \
+            --region ${{ secrets.OCI_REGION }}
+            --key-file ${{ secrets.OCI_PRIVATE_KEY }} \
+
+      # 获取实例列表并检查资源使用情况
+      - name: Get Instances and Check Resources
+        run: |
+          INSTANCE_LIST=$(oci compute instance list --compartment-id ${{ secrets.OCI_TENANCY }} --query "data[].[id]" --raw-output)
+          for INSTANCE_ID in $INSTANCE_LIST; do
+            echo "Checking instance: $INSTANCE_ID"
+
+            # 获取 CPU、内存、网络利用率数据
+            CPU_UTILIZATION=$(oci monitoring metric data query --namespace oci_compute --compartment-id ${{ secrets.OCI_TENANCY }} --resource-id $INSTANCE_ID --metric-name CpuUtilization --start-time $(date -d '7 days ago' --utc +%FT%TZ) --end-time $(date --utc +%FT%TZ) --query "data[0].value[95]" --raw-output)
+            NETWORK_UTILIZATION=$(oci monitoring metric data query --namespace oci_compute --compartment-id ${{ secrets.OCI_TENANCY }} --resource-id $INSTANCE_ID --metric-name NetworkUtilization --start-time $(date -d '7 days ago' --utc +%FT%TZ) --end-time $(date --utc +%FT%TZ) --query "data[0].value[95]" --raw-output)
+
+            # 判断实例是否为空闲（所有资源都需要满足）
+            if [[ $(echo "$CPU_UTILIZATION < 20" | bc) -eq 1 && \
+                  $(echo "$NETWORK_UTILIZATION < 20" | bc) -eq 1; then
+              echo "Instance $INSTANCE_ID is idle, starting Docker container..."
+              
+              # 获取CPU核心
+              CPU_CORES=$(oci compute instance get --instance-id $INSTANCE_ID --raw-output | jq '.data."shape-config".vcpus')
+
+              # 计算容器配置
+              CPU_CORE=${CPU_CORES:-1}  # 默认设置为1核心
+
+              # 获取实例的 IP 地址
+              INSTANCE_IP=$(oci compute instance list-vnics --instance-id $INSTANCE_ID --query "data[0].public-ip" --raw-output)
+              
+              # 远程执行 SSH 命令启动 Docker 容器
+              ssh -i ~/.ssh/id_rsa $OCI_USERNAME@$INSTANCE_IP <<EOF
+                docker run -d --name lookbusy --hostname lookbusy \
+                  -e TZ=Asia/Shanghai \
+                  -e CPU_UTIL="20-30" \
+                  -e CPU_CORE=$CPU_CORE \
+                  -e MEM_UTIL=20 \
+                  -e SPEEDTEST_INTERVAL=10 \
+                  fogforest/lookbusy:latest
+              EOF
+            else
+              echo "Instance $INSTANCE_ID is not idle, no action needed."
+            fi
+          done
+
+      # 删除不符合条件的容器
+      - name: Remove Containers from Idle Instances
+        run: |
+          INSTANCE_LIST=$(oci compute instance list --compartment-id ${{ secrets.OCI_TENANCY }} --query "data[].[id]" --raw-output)
+          for INSTANCE_ID in $INSTANCE_LIST; do
+            echo "Checking if container on $INSTANCE_ID should be removed"
+            
+            INSTANCE_IP=$(oci compute instance list-vnics --instance-id $INSTANCE_ID --query "data[0].public-ip" --raw-output)
+            
+            # 远程 SSH 删除容器
+            ssh -i ~/.ssh/id_rsa $OCI_USERNAME@$INSTANCE_IP <<EOF
+              docker rm -f lookbusy
+            EOF
+          done
