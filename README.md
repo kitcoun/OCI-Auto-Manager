@@ -1,14 +1,5 @@
 
 # OCI ARM 实例自动管理脚本
-免费限制：https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm?utm_source=chatgpt.com
-
-· 示例说明
-假设你有一个非 A1 形状的实例：
-如果 7 天内 95% 的时间 CPU 利用率为 15%，同时网络利用率为 18% → 会被视为闲置
-如果 7 天内 90% 的时间 CPU 利用率为 15%，5% 的时间为 25% → 不会被视为闲置
-如果 CPU 利用率始终低于 20%，但网络利用率始终高于 20% → 不会被视为闲置
-
-回收方式：通常是先停止实例，而不是直接删除，用户可以手动重启
 
 ## 功能简介
 - 每小时自动检查租户是否存在实例
@@ -16,7 +7,17 @@
 - 操作系统：Canonical Ubuntu 22.04 Minimal aarch64
 - 实例类型：VM.Standard.A1.Flex（Oracle Cloud 始终免费）
 
----
+## 限制
+
+免费限制：[说明](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm?utm_source=chatgpt.com)
+
+示例说明
+- 假设你有一个非 A1 形状的实例：
+- 如果 7 天内 95% 的时间 CPU 利用率为 15%，同时网络利用率为 18% → 会被视为闲置
+- 如果 7 天内 90% 的时间 CPU 利用率为 15%，5% 的时间为 25% → 不会被视为闲置
+- 如果 CPU 利用率始终低于 20%，但网络利用率始终高于 20% → 不会被视为闲置
+
+回收方式：通常是先停止实例，而不是直接删除，用户可以手动重启
 
 ## 工作流程说明
 
@@ -34,10 +35,6 @@
 	- 配置 4 OCPU 和 24GB 内存
 	- 分配公网 IP
 	- 注入 SSH 密钥
-
-### 使用限制
-- 每个租户同一时间只允许存在一个`VM.Standard.A1.Flex`实例
-- 实例规格严格遵守免费套餐限制
 
 ---
 
