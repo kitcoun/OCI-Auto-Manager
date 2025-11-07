@@ -91,8 +91,8 @@ jobs:
       - name: Commit changes to disable workflow
         if: env.disable_workflow == 'true'
         run: |
-          git config --global user.email "youremail@example.com"
-          git config --global user.name "Your Name"
+          git config --global user.email "workflow@example.com"
+          git config --global user.name "workflow-bot"
           git add .github/workflows/create-instance.yml
           git commit -m "Disabling workflow by commenting out the cron schedule"
           git push origin HEAD
