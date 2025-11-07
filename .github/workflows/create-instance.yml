@@ -67,13 +67,37 @@ jobs:
           echo "output=${instances}" >> $GITHUB_OUTPUT
 
       - name: Check if instances exist
+        id: check_instances
         run: |
           if [ "$(echo "${{ steps.check_instances.outputs.output }}" | jq length)" -gt 0 ]; then
             echo "❌ 检测到正在运行或非终止状态的 VM.Standard.A1.Flex 实例"
-            exit 1
+            echo "disable_workflow=true" >> $GITHUB_ENV
           else
             echo "✅ 没有运行中的实例，继续执行"
+            echo "disable_workflow=false" >> $GITHUB_ENV
           fi
+
+      - name: Comment out the cron schedule in workflow
+        if: env.disable_workflow == 'true'
+        run: |
+          echo "注释掉工作流中的 cron 调度部分"
+          
+          # 使用 sed 注释掉 cron 触发器部分
+          # sed -i '/cron:/,/jobs:/s/^/  # /' .github/workflows/create-instance.yml
+
+          # 如果需要注释掉整个工作流，可以这样：
+          sed -i 's/^/  # /' .github/workflows/create-instance.yml
+
+      - name: Commit changes to disable workflow
+        if: env.disable_workflow == 'true'
+        run: |
+          git config --global user.email "youremail@example.com"
+          git config --global user.name "Your Name"
+          git add .github/workflows/create-instance.yml
+          git commit -m "Disabling workflow by commenting out the cron schedule"
+          git push origin HEAD
+          
+          exit 1
 
       - name: Get Availability Domain Name
         id: get_availability_domain
