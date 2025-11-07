@@ -21,7 +21,6 @@ jobs:
       OCI_CLI_REGION: ${{ secrets.OCI_REGION }}
       COMPARTMENT_ID: ${{ secrets.OCI_TENANCY }}
       SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
-      IMAGE_ID: "ocid1.image.oc1.ap-singapore-1.aaaaaaaa5a3xwkk5vaichk47fms2uzvsqeriats2uorf6kwgq3l3nwrbhipa"
       INSTANCE_SHAPE: "VM.Standard.A1.Flex"
       OCPUS: 4
       MEMORY_GB: 24
@@ -136,6 +135,28 @@ jobs:
           echo "output=${subnet_id}" >> $GITHUB_OUTPUT
           echo "✅ Subnet ID: ${subnet_id}"
 
+      - name: Get first Ubuntu aarch64 image ID
+        id: get_aarch64_image
+        run: |
+          image_info=$(oci compute image list \
+            --compartment-id "ocid1.tenancy.oc1..aaaaaaaap4gk7mxqi5sa72nmnsea53scfh55oiyem2ze7wf3j2qvzs52lxva" \
+            --operating-system "Canonical Ubuntu" \
+            --operating-system-version "22.04" \
+            --all \
+            --query 'data[*].{id:id, displayName:"display-name"}' \
+            --raw-output)
+
+          image_id=$(echo "$image_info" | jq -r '.[] | select(.displayName | contains("aarch64")) | .id' | head -n 1)
+
+          if [ -z "$image_id" ]; then
+            echo "❌ 未找到包含 aarch64 的镜像"
+            exit 1
+          fi
+
+          echo "✅ Image ID: $image_id"
+          echo "output=$image_id" >> $GITHUB_OUTPUT
+
+
       - name: Create new Ubuntu ARM instance (4C24G)
         id: created_ubuntu
         run: |
@@ -148,7 +169,7 @@ jobs:
             --shape "${{ env.INSTANCE_SHAPE }}" \
             --shape-config "{\"ocpus\": ${{ env.OCPUS }}, \"memoryInGBs\": ${{ env.MEMORY_GB }}}" \
             --display-name "ubuntu-arm-4c24g-$(date +%s)" \
-            --image-id "${{ env.IMAGE_ID }}" \
+            --image-id "${{ steps.get_aarch64_image.outputs.output }}" \
             --subnet-id "${{ steps.get_subnet_id.outputs.output }}" \
             --assign-public-ip true \
             --ssh-authorized-keys-file <(echo "${{ env.SSH_PUBLIC_KEY }}") 2>"$temp_error_file")
