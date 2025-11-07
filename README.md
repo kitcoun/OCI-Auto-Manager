@@ -66,7 +66,7 @@
 ---
 
 ## 手动测试 [示例](https://github.com/kitcoun/OCI-Auto-Manager/wiki)
-> 在Oracle Cloud 控制台-实例-右上角开发人员工具-Cloud Shell
+> 在Oracle Cloud 控制台-实例-右上角开发人员工具(电脑图标)-Cloud Shell
 
 > 输入OCI代码
 
