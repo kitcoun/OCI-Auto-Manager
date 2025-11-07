@@ -33,7 +33,7 @@ jobs:
 
       - name: Check secrets parameter
         run: |
-          if [ -z "${{ secrets.OCI_CLI_USER }}" ]; then
+          if [ -z "${{ env.OCI_CLI_USER }}" ]; then
             echo "❌ secrets相关参数为空，终止工作流"
             exit 1
           else
