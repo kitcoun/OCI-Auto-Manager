@@ -31,6 +31,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check OCI_CLI_USER parameter
+        run: |
+          if [ -z "${{ secrets.OCI_CLI_USER }}" ]; then
+            echo "❌ secrets相关参数为空，终止工作流"
+            exit 1  # 终止工作流
+          else
+            echo "✅ secrets 参数有效"
+          fi
+
       - name: Set up OCI CLI
         run: |
           curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh | bash -s -- --accept-all-defaults
