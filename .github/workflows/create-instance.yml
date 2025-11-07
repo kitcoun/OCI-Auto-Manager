@@ -76,7 +76,7 @@ jobs:
           echo "output=${instances}" >> $GITHUB_OUTPUT
 
       - name: Check if instances exist
-        id: check_instances
+        id: check_instances_status
         run: |
           if [ "$(echo "${{ steps.check_instances.outputs.output }}" | jq length)" -gt 0 ]; then
             echo "❌ 检测到正在运行或非终止状态的 VM.Standard.A1.Flex 实例"
