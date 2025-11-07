@@ -70,22 +70,4 @@
 
 > 输入OCI代码
 
-## 邮件通知与 Secrets 配置（已删除功能）
-
-本仓库的 GitHub Actions 工作流在尝试创建实例时，会捕获创建实例的返回的错误/消息并与仓库根目录的 `message.json` 中配置的字符串进行匹配。
-
-只有在以下两个条件同时满足时，工作流才会发送邮件通知：
-
-- 捕获到的 `message` 与 `message.json` 中的任意一项完全不相同（字符串不相等）。
-- 仓库已配置 SMTP 相关 Secrets（见下）。
-
-必须在仓库的 Settings → Secrets 中配置以下 Secrets（示例）：
-
-- `SMTP_SERVER`：SMTP 地址（例如 smtp.example.com）
-- `SMTP_PORT`：端口号（例如 587）
-- `SMTP_USERNAME`：SMTP 用户名（通常为发件邮箱）
-- `SMTP_PASSWORD`：SMTP 密码或应用专用密码
-- `EMAIL_TO`：邮件接收地址（可用逗号分隔多个）
----
-
 如需详细操作步骤或遇到问题，请参考 Oracle Cloud 官方文档。
